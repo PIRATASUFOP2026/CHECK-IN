@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in do Evento</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { 
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .header { 
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header h1 { 
+            font-size: 28px; 
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #666;
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+        }
+        
+        .sync-status.synced {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .sync-status.syncing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .sync-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 1s infinite;
+        }
+        
+        .sync-status.synced .dot {
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .add-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .add-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .search-box { 
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: border-color 0.2s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .stat-card.success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+        
+        .stat-card.success .stat-value {
+            color: #065f46;
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+        }
+        
+        .stat-card.warning .stat-value {
+            color: #92400e;
+        }
+        
+        .guest-list {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .guest-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .guest-item:last-child { 
+            border-bottom: none; 
+        }
+        
+        .guest-item:hover { 
+            background: #f9f9f9; 
+        }
+        
+        .guest-checkbox {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        .guest-name {
+            flex: 1;
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+        
+        .guest-item.checked .guest-name {
+            color: #999;
+            text-decoration: line-through;
+        }
+        
+        .guest-status {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 600;
+        }
+        
+        .guest-remove {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: none;
+            color: #d1d5db;
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+        
+        .guest-remove:hover {
+            color: #ef4444;
+        }
+        
+        .no-results {
+            padding: 32px 16px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            background: #f9f9f9;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        button:active {
+            background: #f0f0f0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .modal-actions button {
+            flex: 1;
+        }
+        
+        .modal-actions .cancel-btn {
+            background: #f3f4f6;
+            color: #1a1a1a;
+        }
+        
+        .modal-actions .confirm-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .modal-actions .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .config-section {
+            background: #f9f9f9;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px dashed #e0e0e0;
+        }
+
+        .config-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+
+        .config-section p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .config-section code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #d0631c;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>✨ Check-in do Evento</h1>
+                <div class="sync-status synced" id="syncStatus">
+                    <span class="dot"></span>
+                    <span id="syncText">Sincronizando...</span>
+                </div>
+            </div>
+            <button class="add-btn" onclick="openAddModal()" title="Adicionar novo nome">+</button>
+        </div>
+
+        <div id="alertContainer"></div>
+        
+        <!-- Seção de Configuração -->
+        <div class="config-section" id="configSection" style="display: none;">
+            <h3>⚙️ Configurar Firebase</h3>
+            <p>O Firebase não foi configurado ainda. Para sincronização em tempo real:</p>
+            <p style="margin-top: 12px;">1. Copie sua configuração Firebase:</p>
+            <div id="firebaseConfigArea" style="background: white; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; overflow-x: auto; margin: 8px 0; color: #666;">
+                Aguardando configuração...
+            </div>
+            <p style="margin-top: 12px;">2. Cole em <code>firebaseConfig</code> no JavaScript (linha 350)</p>
+        </div>
+        
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="🔍 Digite o nome para buscar..."
+            />
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">✓ Presentes</div>
+                <div class="stat-value" id="checkedCount">0</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">⏳ Pendentes</div>
+                <div class="stat-value" id="pendingCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Taxa</div>
+                <div class="stat-value" id="percentage">0%</div>
+            </div>
+        </div>
+        
+        <div class="guest-list" id="guestList">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 16px;">Carregando dados...</p>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button onclick="clearAll()">🔄 Limpar Tudo</button>
+            <button onclick="exportData()">📥 Exportar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">➕ Adicionar Convidado</div>
+            <input 
+                type="text" 
+                class="modal-input" 
+                id="newGuestName"
+                placeholder="Digite o nome completo"
+                onkeypress="if(event.key === 'Enter') addNewGuest()"
+            />
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeAddModal()">Cancelar</button>
+                <button class="confirm-btn" onclick="addNewGuest()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js"></script>
+
+    <script>
+        // ⚠️ IMPORTANTE: Configure seu Firebase aqui!
+        // Veja o guia: GUIA_FIREBASE.md
+        const firebaseConfig = {
+  apiKey: "AIzaSyCL_Jn7PZTsPoX0ov6UhNSSaS_khrQ2B8o",
+  authDomain: "evento-checkin.firebaseapp.com",
+  databaseURL: "https://evento-checkin-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "evento-checkin",
+  storageBucket: "evento-checkin.firebasestorage.app",
+  messagingSenderId: "423152340093",
+  appId: "1:423152340093:web:d23852302f83ae85c4f514"
+    };
+
+        const GUESTS_INITIAL = [
+            "Abraão Lucas Gomes",
+            "Agra Mello",
+            "Ágata Isis Gomes Peret",
+            "Alexandre Junio",
+            "Alexandre Soares (Cortesia)",
+            "Amanda Gomes Alves",
+            "Ana Elisa Ferreira Moraes",
+            "Ana Flávia Araujo",
+            "Ana Julia",
+            "Ana Paula Constantino Pereira",
+            "Andre Junio Angelino Evaristo",
+            "Arthur Miguel",
+            "Arthur Oliveira Campos",
+            "Beatriz Faria",
+            "Brenda Trufa 🍬☀️💅",
+            "Brendom Lucas Ferreira Viana Kelly (Cortesia)",
+            "Bruna 👩‍❤️‍👩",
+            "Bruna Costa Resende",
+            "Bruno Souza Da Silva",
+            "Caio Cesar",
+            "Camilly Cristini Pereira",
+            "Camilly tratorzin 🚜",
+            "Daniel Moraes Eusébio",
+            "Emanuel Luiz Borges",
+            "Emanuel Luiz Borges (repetido na lista original)",
+            "Erick Alexander",
+            "Felipe Junio Batista",
+            "Fernanda Cruz",
+            "Filipe Monteiro da Silva",
+            "Filipe Ramos",
+            "Flávia ⚽️",
+            "Flávia P Guimarães",
+            "Francielle da Silva Fonseca",
+            "Gabriel Helyone da Silva",
+            "Gabriel Mendes",
+            "Gabriel Moutinho",
+            "Gabriel Oliveira",
+            "Gabriela Thainara Veríssimo",
+            "Gian Carlos De Souza",
+            "Haydêe Lanna",
+            "Hellysson K M Pinto",
+            "Herick 🫣",
+            "Hisao Matsumura",
+            "Hugo Pagoioto Romingues",
+            "Igor Alves Costas",
+            "Isadora Ribeiro Santos",
+            "Jessica Lourdes + 1 (Comprovante)",
+            "João Marcelo Barbosa Borges",
+            "Júlia K F Paula",
+            "Laís Silva Oliveira",
+            "Leidiane Delavali Soares",
+            "Leonardo C Novais",
+            "Luan Hipólito",
+            "Lucas Gamarano",
+            "Luis Flávio",
+            "Luiz Eduardo Oliveira",
+            "Luiza Fernanda Teixeira Silva",
+            "Marcelo Augusto Alves",
+            "Marco Túlio Alvarenga",
+            "Maria Alice Silva",
+            "Maria Alice Silva Soares",
+            "Maria Fernanda Golçalves",
+            "Maria Tereza Alves de Oliveira",
+            "Mariana O Lopes",
+            "Mario Augusto Aneli Silva",
+            "Mateus Augusto de Souza",
+            "Matheus Gabriel",
+            "Matheus Guilherme",
+            "Matheus Henrique",
+            "Melissa Helena Cardoso",
+            "Michel Borges",
+            "Miriam Kelly",
+            "Nikolly 🌻",
+            "Otávio Manoel de Faria",
+            "Patrícia Ferreira Peçanha",
+            "Patrick Henrique de Souza Gomes",
+            "Paulo Henrique da Cruz",
+            "Paulo Moreira Neves Junior",
+            "Paulo Victor Mendes",
+            "Pedro Barbosa",
+            "Pedro Gamarano",
+            "Pedro Henrique Oliveira Silva",
+            "Raphaela Reis Bonani",
+            "Rayanne Silva",
+            "Renie Ruan Rufino",
+            "Ruth Gaia",
+            "Samuel Apolinário",
+            "Sarah Cristina O Paiva",
+            "Silmara Cristina Da Silva Starlino",
+            "Sol Bitencurte",
+            "Stephany Leoncio",
+            "Tayná Cristina Aguiar",
+            "Tayna C A Ferreira",
+            "Thiago Bekrman Silva",
+            "Thiago Magalhães",
+            "Victor Carvalho Lana de Lima",
+            "Victor Gama",
+            "Victor Kauan",
+            "Victoria Cristina Souza",
+            "Vitor Hugo Pena",
+            "Vitória Almeida",
+            "Warley Brener",
+            "Warley Brener (repetido na lista original)",
+            "Yann Ferreira",
+            "Yasmin Corcini",
+            "Yuri da Silva Neves"
+        ];
+
+        let guests = [...GUESTS_INITIAL];
+        let checked = new Set();
+        let filtered = [...guests];
+        let db = null;
+        let firebaseConfigured = false;
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        }
+
+        function initFirebase() {
+            try {
+                if (firebaseConfig.apiKey === "SUA_API_KEY_AQUI") {
+                    document.getElementById('configSection').style.display = 'block';
+                    updateSyncStatus(false);
+                    showAlert('Firebase não configurado. Configure antes de usar!', 'error');
+                    return;
+                }
+
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                firebaseConfigured = true;
+                document.getElementById('configSection').style.display = 'none';
+                
+                loadFromFirebase();
+                setupRealtimeListener();
+                
+            } catch (error) {
+                console.log('Erro ao inicializar Firebase:', error);
+                document.getElementById('configSection').style.display = 'block';
+                updateSyncStatus(false);
+            }
+        }
+
+        function updateSyncStatus(synced = true) {
+            const status = document.getElementById('syncStatus');
+            const text = document.getElementById('syncText');
+            
+            if (synced) {
+                status.classList.add('synced');
+                status.classList.remove('syncing');
+                text.textContent = '🔄 Sincronizado';
+            } else {
+                status.classList.remove('synced');
+                status.classList.add('syncing');
+                text.textContent = '⏳ Aguardando...';
+            }
+        }
+
+        function setupRealtimeListener() {
+            if (!db) return;
+            
+            db.ref('checkin').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    guests = data.guests || [...GUESTS_INITIAL];
+                    checked = new Set(data.checked || []);
+                    filtered = [...guests];
+                    updateStats();
+                    renderGuests(filtered);
+                }
+                updateSyncStatus(true);
+            });
+        }
+
+        function saveToFirebase() {
+            if (!firebaseConfigured || !db) return;
+            
+            updateSyncStatus(false);
+            
+            db.ref('checkin').set({
+                guests: guests,
+                checked: Array.from(checked),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).catch(error => {
+                console.log('Erro ao salvar:', error);
+                updateSyncStatus(true);
+            });
+        }
+
+        function loadFromFirebase() {
+            if (!db) return;
+            
+            db.ref('checkin').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    guests = data.guests || [...GUESTS_INITIAL];
+                    checked = new Set(data.checked || []);
+                } else {
+                    // Primeira vez: inicializa com a lista padrão
+                    guests = [...GUESTS_INITIAL];
+                    checked = new Set();
+                    saveToFirebase();
+                }
+                filtered = [...guests];
+                updateStats();
+                renderGuests(filtered);
+                updateSyncStatus(true);
+            });
+        }
+
+        function renderGuests(list = guests) {
+            const guestList = document.getElementById('guestList');
+            
+            if (list.length === 0) {
+                guestList.innerHTML = '<div class="no-results">Nenhum resultado encontrado</div>';
+                return;
+            }
+            
+            guestList.innerHTML = list.map((guest) => `
+                <div class="guest-item ${checked.has(guest) ? 'checked' : ''}" onclick="toggleGuest('${guest.replace(/'/g, "\\'")}')">
+                    <input 
+                        type="checkbox" 
+                        class="guest-checkbox"
+                        ${checked.has(guest) ? 'checked' : ''}
+                        onchange="return false"
+                    />
+                    <div class="guest-name">${guest}</div>
+                    ${checked.has(guest) ? '<div class="guest-status">✓ Presente</div>' : ''}
+                    <button class="guest-remove" onclick="event.stopPropagation(); removeGuest('${guest.replace(/'/g, "\\'")}')">×</button>
+                </div>
+            `).join('');
+        }
+
+        function toggleGuest(name) {
+            if (checked.has(name)) {
+                checked.delete(name);
+            } else {
+                checked.add(name);
+            }
+            updateStats();
+            renderGuests(filtered);
+            saveToFirebase();
+        }
+
+        function removeGuest(name) {
+            if (confirm(`Remover "${name}" da lista?`)) {
+                const index = guests.indexOf(name);
+                if (index > -1) {
+                    guests.splice(index, 1);
+                    checked.delete(name);
+                    updateStats();
+                    renderGuests(filtered);
+                    saveToFirebase();
+                    showAlert(`${name} foi removido`, 'success');
+                }
+            }
+        }
+
+        function updateStats() {
+            const total = guests.length;
+            const checkedC = checked.size;
+            const pending = total - checkedC;
+            const percentage = total > 0 ? Math.round((checkedC / total) * 100) : 0;
+            
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('checkedCount').textContent = checkedC;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('percentage').textContent = percentage + '%';
+        }
+
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('active');
+            document.getElementById('newGuestName').focus();
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+            document.getElementById('newGuestName').value = '';
+        }
+
+        function addNewGuest() {
+            const newName = document.getElementById('newGuestName').value.trim();
+            
+            if (newName === '') {
+                showAlert('Por favor, digite um nome', 'error');
+                return;
+            }
+            
+            if (guests.includes(newName)) {
+                showAlert('Este nome já existe na lista', 'error');
+                return;
+            }
+            
+            guests.push(newName);
+            guests.sort();
+            
+            closeAddModal();
+            updateStats();
+            
+            document.getElementById('searchInput').value = '';
+            filtered = [...guests];
+            renderGuests(filtered);
+            
+            saveToFirebase();
+            showAlert(`${newName} foi adicionado!`, 'success');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            filtered = guests.filter(g => g.toLowerCase().includes(query));
+            renderGuests(filtered);
+        });
+
+        function clearAll() {
+            if (confirm('Tem certeza? Isso vai limpar todos os check-ins.')) {
+                checked.clear();
+                updateStats();
+                renderGuests(filtered);
+                saveToFirebase();
+                showAlert('Check-ins limpos', 'success');
+            }
+        }
+
+        function exportData() {
+            const present = Array.from(checked).sort();
+            const absent = guests.filter(g => !checked.has(g)).sort();
+            
+            const report = `RELATÓRIO DE CHECK-IN DO EVENTO
+=====================================
+
+RESUMO
+------
+Total de convidados: ${guests.length}
+Presentes: ${checked.size}
+Ausentes: ${absent.length}
+Taxa de presença: ${Math.round((checked.size / guests.length) * 100)}%
+Data: ${new Date().toLocaleString('pt-BR')}
+
+PRESENTES (${present.length})
+--------
+${present.map(g => '✓ ' + g).join('\n')}
+
+AUSENTES (${absent.length})
+--------
+${absent.map(g => '✗ ' + g).join('\n')}
+`;
+
+            const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'relatorio-checkin-' + new Date().toLocaleDateString('pt-BR').replace(/\//g, '-') + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert('Relatório baixado!', 'success');
+        }
+
+        document.getElementById('addModal').addEventListener('click', (e) => {
+            if (e.target.id === 'addModal') {
+                closeAddModal();
+            }
+        });
+
+        // Inicializar
+        initFirebase();
+    </script>
+</body>
+</html>
